@@ -1,0 +1,121 @@
+---
+title: "DAP II Problem Set 4"
+format: 
+  pdf:
+    keep-tex: true
+    include-in-header: 
+       text: |
+         \usepackage{fvextra}
+         \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
+include-before-body:
+  text: |
+    \RecustomVerbatimEnvironment{verbatim}{Verbatim}{
+      showspaces = false,
+      showtabs = false,
+      breaksymbolleft={},
+      breaklines
+    }
+---
+
+**PS4:** Due Sat Nov 2 at 5:00PM Central. Worth 100 points. 
+We use (`*`) to indicate a problem that we think might be time consuming. 
+    
+## Style Points (10 pts) 
+Please refer to the minilesson on code style
+**[here](https://uchicago.zoom.us/rec/share/pG_wQ-pHTQrJTmqNn4rcrw5V194M2H2s-2jdy8oVhWHkd_yZt9o162IWurpA-fxU.BIQlSgZLRYctvzp-)**.
+
+## Submission Steps (10 pts)
+1. This problem set is a paired problem set.
+2. Play paper, scissors, rock to determine who goes first. Call that person *Partner 1*.
+    - Partner 1 (name and cnet ID): Sara Van Valkenburgh, 12415386
+    - Partner 2 (name and cnet ID):
+3. Partner 1 will accept the `ps4` and then share the link it creates with their partner. You can only share it with one partner so you will not be able to change it after your partner has accepted. 
+4. "This submission is our work alone and complies with the 30538 integrity policy." Add your initials to indicate your agreement: \*\*sv\*\* \*\*\_\_\*\*
+5. "I have uploaded the names of anyone else other than my partner and I worked with on the problem set **[here](https://docs.google.com/forms/d/185usrCREQaUbvAXpWhChkjghdGgmAZXA3lPWpXLLsts/edit)**"  (1 point)
+6. Late coins used this pset: \*\*\_\_\*\* Late coins left after submission: \*\*\_\_\*\*
+7. Knit your `ps4.qmd` to an PDF file to make `ps4.pdf`, 
+    * The PDF should not be more than 25 pages. Use `head()` and re-size figures when appropriate. 
+8. (Partner 1): push  `ps4.qmd` and `ps4.pdf` to your github repo.
+9. (Partner 1): submit `ps4.pdf` via Gradescope. Add your partner on Gradescope.
+10. (Partner 1): tag your submission in Gradescope
+
+**Important:** Repositories are for tracking code. **Do not commit the data or shapefiles to your repo.** The best way to do this is with `.gitignore`, which we have covered in class. If you do accidentally commit the data, Github has a [guide](https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-large-files-on-github#removing-files-from-a-repositorys-history). The best course of action depends on whether you have pushed yet. This also means that both partners will have to download the initial raw data and any data cleaning code will need to be re-run on both partners' computers. 
+
+## Download and explore the Provider of Services (POS) file (10 pts)
+
+1. 
+Vairbales pulled:
+
+* PRVDR_CTGRY_SBTYP_CD - Identifies the subtype of the provider, within the primary category
+* PRVDR_CTGRY_CD -  Identifies the type of provider participating in the Medicare/Medicaid program
+* FAC_NAME - Facility name
+* PRVDR_NUM - Unique CMS certification number
+* PGM_TRMNTN_CD -  Indicates the current termination status for the provider (termination code)
+* ZIP_CD - Zip code
+
+2. 
+```{python}
+import pandas as pd
+
+# read in the data for Q4 2016
+filepath = "data/pos2016.csv"
+data = pd.read_csv(filepath)
+
+```
+
+```{python}
+data['PRVDR_CTGRY_CD'] = data['PRVDR_CTGRY_CD'].apply(lambda x: f"{int(float(x)):02}" if pd.notna(x) else x)
+data['PRVDR_CTGRY_SBTYP_CD'] = data['PRVDR_CTGRY_SBTYP_CD'].apply(lambda x: f"{int(float(x)):02}" if pd.notna(x) else x)
+
+# subset to provider type code 01 and subtype code 01
+short_term_hospitals = data[(data['PRVDR_CTGRY_CD'] == '01') & (data['PRVDR_CTGRY_SBTYP_CD'] == '01')]
+
+short_term_hospitals.size
+```
+
+    a. There are 43470 hospitals that fit these two categories  reported in this data. 
+
+    b. 
+
+3. 
+4. 
+    a.
+    b.
+
+## Identify hospital closures in POS file (15 pts) (*)
+
+1. 
+2. 
+3. 
+    a.
+    b.
+    c.
+
+## Download Census zip code shapefile (10 pt) 
+
+1. 
+    a.
+    b. 
+2. 
+
+## Calculate zip code’s distance to the nearest hospital (20 pts) (*)
+
+1. 
+2. 
+3. 
+4. 
+    a.
+    b.
+5. 
+    a.
+    b.
+    c.
+    
+## Effects of closures on access in Texas (15 pts)
+
+1. 
+2. 
+3. 
+4. 
+
+## Reflecting on the exercise (10 pts) 
