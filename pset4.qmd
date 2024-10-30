@@ -43,8 +43,7 @@ Please refer to the minilesson on code style
 
 ## Download and explore the Provider of Services (POS) file (10 pts)
 
-1. 
-Vairbales pulled:
+1. Variables pulled:
 
 * PRVDR_CTGRY_SBTYP_CD - Identifies the subtype of the provider, within the primary category
 * PRVDR_CTGRY_CD -  Identifies the type of provider participating in the Medicare/Medicaid program
@@ -59,31 +58,140 @@ import pandas as pd
 
 # read in the data for Q4 2016
 filepath = "data/pos2016.csv"
-data = pd.read_csv(filepath)
+data_2016 = pd.read_csv(filepath)
 
 ```
 
 ```{python}
-data['PRVDR_CTGRY_CD'] = data['PRVDR_CTGRY_CD'].apply(lambda x: f"{int(float(x)):02}" if pd.notna(x) else x)
-data['PRVDR_CTGRY_SBTYP_CD'] = data['PRVDR_CTGRY_SBTYP_CD'].apply(lambda x: f"{int(float(x)):02}" if pd.notna(x) else x)
+# Make sure the codes are in the right format -- 01
+data_2016['PRVDR_CTGRY_CD'] = data_2016['PRVDR_CTGRY_CD'].apply(
+    lambda x: f"{int(float(x)):02}" if pd.notna(x) else x)
+data_2016['PRVDR_CTGRY_SBTYP_CD'] = data_2016['PRVDR_CTGRY_SBTYP_CD'].apply(
+    lambda x: f"{int(float(x)):02}" if pd.notna(x) else x)
 
 # subset to provider type code 01 and subtype code 01
-short_term_hospitals = data[(data['PRVDR_CTGRY_CD'] == '01') & (data['PRVDR_CTGRY_SBTYP_CD'] == '01')]
+short_term_hospitals = data_2016[(data_2016['PRVDR_CTGRY_CD'] == '01') & (
+    data_2016['PRVDR_CTGRY_SBTYP_CD'] == '01')]
 
 short_term_hospitals['PRVDR_NUM'].unique
 ```
 
-    a. There are 7245 hospitals in this 2016 dataset that fit these categories.
+    a. We know from the data dictionary that each hospital has a unique CMS certification number, which is listed under PRVDR_NUM. There are 7245 unique CMS numbers in this 2016 dataset, indicating that there are 7245 hospitals that fit these categories.
 
-    b. According to https://www.definitivehc.com/blog/how-many-hospitals-are-in-the-us, there are 3,873 short-term accute hospitals in the United States as of April 2024, which is a much smaller number than the one in our data set. It could be that many hospitals have merged or closed since 2016. According to https://www.statista.com/statistics/185843/number-of-all-hospitals-in-the-us/, there were 5534 hospitals in the US in 2016. This is also smaller than the number in our data set, even though the data was from the same year. It could be that hospitals are coded differently in different data sets, or this dataset might exclude or include additional facilities not in other counts.
+    b. According to "Definitive Healthcare" https://www.definitivehc.com/blog/how-many-hospitals-are-in-the-us, there are 3,873 short-term accute hospitals in the United States as of April 2024, which is a much smaller number than the one in our data set. It could be that many hospitals have merged or closed since 2016. According to "Statista" https://www.statista.com/statistics/185843/number-of-all-hospitals-in-the-us/, there were 5534 hospitals in the US in 2016. This is also smaller than the number in our data set, even though the data was from the same year. It could be that hospitals are coded differently in different data sets, or this dataset might exclude or include additional facilities not in other counts.
 
 3. 
+```{python}
+import os
+
+# read in other data sets
+data_2017 = pd.read_csv('data/pos2017.csv')
+data_2018 = pd.read_csv('data/pos2018.csv', encoding='latin1')
+data_2019 = pd.read_csv('data/pos2019.csv', encoding='latin1')
+
+# get rid of strange symbol in the column name
+data_2018.rename(
+    columns={'ï»¿PRVDR_CTGRY_SBTYP_CD': 'PRVDR_CTGRY_SBTYP_CD'}, inplace=True)
 
 
+```
+
+```{python}
+# Function to make sure that codes in each dataset are in 01 format
+
+def format_provider_codes(data):
+
+    for column in ['PRVDR_CTGRY_CD', 'PRVDR_CTGRY_SBTYP_CD']:
+        data[column] = data[column].apply(
+            lambda x: f"{int(float(x)):02}" if pd.notna(x) else x
+        )
+    return data
+
+data_2017 = format_provider_codes(data_2017)
+data_2018 = format_provider_codes(data_2018)
+data_2019 = format_provider_codes(data_2019)
+
+# add a year column to each df
+data_2016['year'] = 2016
+data_2017['year'] = 2017
+data_2018['year'] = 2018
+data_2019['year'] = 2019
+```
+
+```{python}
+# subset data for each year
+short_term_hospitals_2017 = data_2017[
+    (data_2017['PRVDR_CTGRY_CD'] == '01') &
+    (data_2017['PRVDR_CTGRY_SBTYP_CD'] == '01')
+]
+
+short_term_hospitals_2018 = data_2018[
+    (data_2018['PRVDR_CTGRY_CD'] == '01') &
+    (data_2018['PRVDR_CTGRY_SBTYP_CD'] == '01')
+]
+
+short_term_hospitals_2019 = data_2019[
+    (data_2019['PRVDR_CTGRY_CD'] == '01') &
+    (data_2019['PRVDR_CTGRY_SBTYP_CD'] == '01')
+]
+
+# combine all four datasets
+data = pd.concat(
+    [short_term_hospitals, short_term_hospitals_2017,
+        short_term_hospitals_2018, short_term_hospitals_2019],
+    ignore_index=True
+) 
+```
+
+```{python}
+import altair as alt
+
+# Count the observations by year
+observations_by_year = data.groupby('year').size().reset_index(name='count')
+
+# Create a bar chart
+alt.Chart(observations_by_year).mark_bar(color='hotpink').encode(
+    x=alt.X('year:O', title='Year'),
+    y=alt.Y('count:Q', title='Number of Observations')
+).properties(
+    title='Number of Observations by Year',
+    width=400,
+    height=300
+) + alt.Chart(observations_by_year).mark_text(
+    align='center',
+    baseline='bottom',
+    dy=-5
+).encode(
+    text='count:Q'
+)
+```
 
 4. 
-    a.
-    b.
+a.
+```{python}
+
+# Count the number of unique hospitals by year
+unique_hospitals = data.groupby(
+    'year')['PRVDR_NUM'].nunique().reset_index(name='unique_hospitals')
+
+# Create a bar chart for unique hospitals and add text labels
+alt.Chart(unique_hospitals).mark_bar(color='green').encode(
+    x=alt.X('year:O', title='Year'),
+    y=alt.Y('unique_hospitals:Q', title='Number of Unique Hospitals')
+).properties(
+    title='Number of Unique Hospitals by Year',
+    width=400,
+    height=300
+) + alt.Chart(unique_hospitals).mark_text(
+    align='center',
+    baseline='bottom',
+    dy=-5
+).encode(
+    text='unique_hospitals:Q'
+)
+```
+
+    b. The two plots are exactly the same, which tells us that there is one hospital per row of our data set.
 
 ## Identify hospital closures in POS file (15 pts) (*)
 
