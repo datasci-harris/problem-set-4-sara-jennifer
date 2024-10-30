@@ -30,7 +30,7 @@ Please refer to the minilesson on code style
     - Partner 1 (name and cnet ID): Sara Van Valkenburgh, 12415386
     - Partner 2 (name and cnet ID):
 3. Partner 1 will accept the `ps4` and then share the link it creates with their partner. You can only share it with one partner so you will not be able to change it after your partner has accepted. 
-4. "This submission is our work alone and complies with the 30538 integrity policy." Add your initials to indicate your agreement: \*\*sv\*\* \*\*\_\_\*\*
+4. "This submission is our work alone and complies with the 30538 integrity policy." Add your initials to indicate your agreement: \*\*sv\*\* \*\*JE\*\*
 5. "I have uploaded the names of anyone else other than my partner and I worked with on the problem set **[here](https://docs.google.com/forms/d/185usrCREQaUbvAXpWhChkjghdGgmAZXA3lPWpXLLsts/edit)**"  (1 point)
 6. Late coins used this pset: \*\*\_\_\*\* Late coins left after submission: \*\*\_\_\*\*
 7. Knit your `ps4.qmd` to an PDF file to make `ps4.pdf`, 
@@ -43,7 +43,12 @@ Please refer to the minilesson on code style
 
 ## Download and explore the Provider of Services (POS) file (10 pts)
 
+<<<<<<< Updated upstream
 1. Variables pulled:
+=======
+1. 
+Variables pulled:
+>>>>>>> Stashed changes
 
 * PRVDR_CTGRY_SBTYP_CD - Identifies the subtype of the provider, within the primary category
 * PRVDR_CTGRY_CD -  Identifies the type of provider participating in the Medicare/Medicaid program
