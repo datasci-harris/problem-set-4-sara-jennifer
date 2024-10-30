@@ -70,14 +70,17 @@ data['PRVDR_CTGRY_SBTYP_CD'] = data['PRVDR_CTGRY_SBTYP_CD'].apply(lambda x: f"{i
 # subset to provider type code 01 and subtype code 01
 short_term_hospitals = data[(data['PRVDR_CTGRY_CD'] == '01') & (data['PRVDR_CTGRY_SBTYP_CD'] == '01')]
 
-short_term_hospitals.size
+short_term_hospitals['PRVDR_NUM'].unique
 ```
 
-    a. There are 43470 hospitals that fit these two categories  reported in this data. 
+    a. There are 7245 hospitals in this 2016 dataset that fit these categories.
 
-    b. 
+    b. According to https://www.definitivehc.com/blog/how-many-hospitals-are-in-the-us, there are 3,873 short-term accute hospitals in the United States as of April 2024, which is a much smaller number than the one in our data set. It could be that many hospitals have merged or closed since 2016. According to https://www.statista.com/statistics/185843/number-of-all-hospitals-in-the-us/, there were 5534 hospitals in the US in 2016. This is also smaller than the number in our data set, even though the data was from the same year. It could be that hospitals are coded differently in different data sets, or this dataset might exclude or include additional facilities not in other counts.
 
 3. 
+
+
+
 4. 
     a.
     b.
