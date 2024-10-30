@@ -1,0 +1,4 @@
+# Ignore the data folders in .csv form and .shp form
+
+*.csv
+*.shp
