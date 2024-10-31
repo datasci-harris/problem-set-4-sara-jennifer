@@ -30,7 +30,7 @@ Please refer to the minilesson on code style
     - Partner 1 (name and cnet ID): Sara Van Valkenburgh, 12415386
     - Partner 2 (name and cnet ID):
 3. Partner 1 will accept the `ps4` and then share the link it creates with their partner. You can only share it with one partner so you will not be able to change it after your partner has accepted. 
-4. "This submission is our work alone and complies with the 30538 integrity policy." Add your initials to indicate your agreement: \*\*sv\*\* \*\*JE\*\*
+4. "This submission is our work alone and complies with the 30538 integrity policy." Add your initials to indicate your agreement: \*\*sv\*\* \*\*\_\_\*\*
 5. "I have uploaded the names of anyone else other than my partner and I worked with on the problem set **[here](https://docs.google.com/forms/d/185usrCREQaUbvAXpWhChkjghdGgmAZXA3lPWpXLLsts/edit)**"  (1 point)
 6. Late coins used this pset: \*\*\_\_\*\* Late coins left after submission: \*\*\_\_\*\*
 7. Knit your `ps4.qmd` to an PDF file to make `ps4.pdf`, 
@@ -43,12 +43,7 @@ Please refer to the minilesson on code style
 
 ## Download and explore the Provider of Services (POS) file (10 pts)
 
-<<<<<<< Updated upstream
 1. Variables pulled:
-=======
-1. 
-Variables pulled:
->>>>>>> Stashed changes
 
 * PRVDR_CTGRY_SBTYP_CD - Identifies the subtype of the provider, within the primary category
 * PRVDR_CTGRY_CD -  Identifies the type of provider participating in the Medicare/Medicaid program
@@ -61,10 +56,13 @@ Variables pulled:
 ```{python}
 import pandas as pd
 
+
 # read in the data for Q4 2016
 filepath = "data/pos2016.csv"
 data_2016 = pd.read_csv(filepath)
 
+# Adding the year earlier so that python recognizes it when we combine the dataframes later
+data_2016['year'] = 2016
 ```
 
 ```{python}
@@ -117,7 +115,6 @@ data_2018 = format_provider_codes(data_2018)
 data_2019 = format_provider_codes(data_2019)
 
 # add a year column to each df
-data_2016['year'] = 2016
 data_2017['year'] = 2017
 data_2018['year'] = 2018
 data_2019['year'] = 2019
@@ -201,11 +198,125 @@ alt.Chart(unique_hospitals).mark_bar(color='green').encode(
 ## Identify hospital closures in POS file (15 pts) (*)
 
 1. 
+
+```{python}
+
+# Which hospitals were active in 2016?
+active_2016 = data[(data["year"] == 2016) & (data["PGM_TRMNTN_CD"] == 0)]
+
+closure_info = []
+
+for _, row in active_2016.iterrows():
+    facility_name = row["FAC_NAME"]
+    zip_code = row["ZIP_CD"]
+
+    for check_year in range(2017, 2020):
+        hospital_status = data[(data["FAC_NAME"] == facility_name) & (data["year"] == check_year)]
+
+        if hospital_status.empty:
+            closure_info.append({
+                "FAC_NAME": facility_name,
+                "ZIP_CD": zip_code,
+                "Year_Closed": check_year
+            })
+            break
+        elif hospital_status["PGM_TRMNTN_CD"].values[0] == 1:
+            closure_info.append({
+                "FAC_NAME": facility_name,
+                "ZIP_CD": zip_code,
+                "Year_Closed": check_year
+            })
+            break
+
+closure_df = pd.DataFrame(closure_info)
+```
+
+```{python}
+print(f"There are {closure_df.shape[0]} hospitals that were active in 2016 but are suspected to have closed by 2019")
+```
+
 2. 
+
+```{python}
+# Sort them by name
+closure_df_sorted = closure_df.sort_values(by="FAC_NAME")
+
+# Report the first 10 rows
+print(closure_df_sorted.head(10))
+```
+
 3. 
+
+```{python}
+
+# Creating a function to filter suspected closures
+def count_active_hospitals(zip_code, year):
+    return data[(data["ZIP_CD"] == zip_code) & (data["year"] == year) & (data["PGM_TRMNTN_CD"] == 0)].shape[0]
+
+# Using the function
+valid_closures = []
+
+for index, closure in closure_df.iterrows():
+    zip_code = closure["ZIP_CD"]
+    year_closed = closure["Year_Closed"]
+    active_before = count_active_hospitals(zip_code, year_closed)
+    active_after = count_active_hospitals(zip_code, year_closed + 1)
+
+    if active_after < active_before:
+        valid_closures.append(closure)
+
+valid_closure_df = pd.DataFrame(valid_closures)
+``` 
+    
     a.
+
+```{python}
+
+potential_mergers = []
+
+for index, closure in valid_closure_df.iterrows():
+    zip_code = closure["ZIP_CD"]
+    year_closed = closure["Year_Closed"]
+    
+    active_after = count_active_hospitals(zip_code, year_closed + 1)
+    
+    if active_after >= 1:  
+        potential_mergers.append(closure)
+
+potential_merger_df = pd.DataFrame(potential_mergers)
+print(f"There are {potential_merger_df.shape[0]} hospitals that fit the definition of potentially being a merger/acquisition")
+```
+
     b.
-    c.
+
+```{python}
+
+remaining_hospitals = []
+
+for index, closure in valid_closure_df.iterrows():
+    zip_code = closure["ZIP_CD"]
+    year_closed = closure["Year_Closed"]
+    active_after = count_active_hospitals(zip_code, year_closed + 1)
+    if active_after >= 1:
+        remaining_hospitals.append(index)
+
+remaining_hospitals_df = valid_closure_df.loc[remaining_hospitals]
+
+filtered_valid_closure_df = valid_closure_df[~valid_closure_df.index.isin(remaining_hospitals_df.index)]
+
+print(f"There are {filtered_valid_closure_df.shape[0]} hospitals left after correcting for potential mergers/acquisitions")
+```
+
+    c. 
+
+```{python}
+
+# Filtering
+filtered_valid_closure_df_sorted = filtered_valid_closure_df.sort_values(by="FAC_NAME")
+
+# Printing the first 10 rows
+print(filtered_valid_closure_df_sorted.head(10))
+```
 
 ## Download Census zip code shapefile (10 pt) 
 
