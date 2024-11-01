@@ -41,6 +41,14 @@ Please refer to the minilesson on code style
 
 **Important:** Repositories are for tracking code. **Do not commit the data or shapefiles to your repo.** The best way to do this is with `.gitignore`, which we have covered in class. If you do accidentally commit the data, Github has a [guide](https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-large-files-on-github#removing-files-from-a-repositorys-history). The best course of action depends on whether you have pushed yet. This also means that both partners will have to download the initial raw data and any data cleaning code will need to be re-run on both partners' computers. 
 
+```{python}
+import pandas as pd
+import os
+import altair as alt
+import geopandas as gpd
+import matplotlib.pyplot as plt
+```
+
 ## Download and explore the Provider of Services (POS) file (10 pts)
 
 1. Variables pulled:
@@ -54,8 +62,6 @@ Please refer to the minilesson on code style
 
 2. 
 ```{python}
-import pandas as pd
-
 
 # read in the data for Q4 2016
 filepath = "data/pos2016.csv"
@@ -85,8 +91,6 @@ short_term_hospitals['PRVDR_NUM'].unique
 
 3. 
 ```{python}
-import os
-
 # read in other data sets
 data_2017 = pd.read_csv('data/pos2017.csv')
 data_2018 = pd.read_csv('data/pos2018.csv', encoding='latin1')
@@ -95,13 +99,10 @@ data_2019 = pd.read_csv('data/pos2019.csv', encoding='latin1')
 # get rid of strange symbol in the column name
 data_2018.rename(
     columns={'ï»¿PRVDR_CTGRY_SBTYP_CD': 'PRVDR_CTGRY_SBTYP_CD'}, inplace=True)
-
-
 ```
 
 ```{python}
 # Function to make sure that codes in each dataset are in 01 format
-
 def format_provider_codes(data):
 
     for column in ['PRVDR_CTGRY_CD', 'PRVDR_CTGRY_SBTYP_CD']:
@@ -146,26 +147,35 @@ data = pd.concat(
 ```
 
 ```{python}
-import altair as alt
 
 # Count the observations by year
 observations_by_year = data.groupby('year').size().reset_index(name='count')
 
-# Create a bar chart
-alt.Chart(observations_by_year).mark_bar(color='hotpink').encode(
+# Base bar chart
+base_chart = alt.Chart(observations_by_year).mark_bar(color='hotpink').encode(
     x=alt.X('year:O', title='Year'),
     y=alt.Y('count:Q', title='Number of Observations')
 ).properties(
     title='Number of Observations by Year',
     width=400,
     height=300
-) + alt.Chart(observations_by_year).mark_text(
+)
+
+# Text chart
+text_chart = alt.Chart(observations_by_year).mark_text(
     align='center',
     baseline='bottom',
-    dy=-5
+    dy=-5,
+    color='black'
 ).encode(
+    x=alt.X('year:O'),
+    y=alt.Y('count:Q'),
     text='count:Q'
 )
+
+# Layer the bar and text charts
+chart = base_chart + text_chart
+chart
 ```
 
 4. 
@@ -176,21 +186,31 @@ a.
 unique_hospitals = data.groupby(
     'year')['PRVDR_NUM'].nunique().reset_index(name='unique_hospitals')
 
-# Create a bar chart for unique hospitals and add text labels
-alt.Chart(unique_hospitals).mark_bar(color='green').encode(
+# Base bar chart
+base_chart2 = alt.Chart(unique_hospitals).mark_bar(color='green').encode(
     x=alt.X('year:O', title='Year'),
     y=alt.Y('unique_hospitals:Q', title='Number of Unique Hospitals')
 ).properties(
     title='Number of Unique Hospitals by Year',
     width=400,
     height=300
-) + alt.Chart(unique_hospitals).mark_text(
+)
+
+# Text chart
+text_chart2 = alt.Chart(unique_hospitals).mark_text(
     align='center',
     baseline='bottom',
-    dy=-5
+    dy=-5,
+    color='black'
 ).encode(
+    x=alt.X('year:O'),
+    y=alt.Y('unique_hospitals:Q'),
     text='unique_hospitals:Q'
 )
+
+# Layer the bar and text charts
+chart2 = base_chart2 + text_chart2
+chart2
 ```
 
     b. The two plots are exactly the same, which tells us that there is one hospital per row of our data set.
@@ -211,7 +231,8 @@ for _, row in active_2016.iterrows():
     zip_code = row["ZIP_CD"]
 
     for check_year in range(2017, 2020):
-        hospital_status = data[(data["FAC_NAME"] == facility_name) & (data["year"] == check_year)]
+        hospital_status = data[(data["FAC_NAME"] == facility_name) & (
+            data["year"] == check_year)]
 
         if hospital_status.empty:
             closure_info.append({
@@ -253,6 +274,7 @@ print(closure_df_sorted.head(10))
 def count_active_hospitals(zip_code, year):
     return data[(data["ZIP_CD"] == zip_code) & (data["year"] == year) & (data["PGM_TRMNTN_CD"] == 0)].shape[0]
 
+
 # Using the function
 valid_closures = []
 
@@ -277,14 +299,15 @@ potential_mergers = []
 for index, closure in valid_closure_df.iterrows():
     zip_code = closure["ZIP_CD"]
     year_closed = closure["Year_Closed"]
-    
+
     active_after = count_active_hospitals(zip_code, year_closed + 1)
-    
-    if active_after >= 1:  
+
+    if active_after >= 1:
         potential_mergers.append(closure)
 
 potential_merger_df = pd.DataFrame(potential_mergers)
-print(f"There are {potential_merger_df.shape[0]} hospitals that fit the definition of potentially being a merger/acquisition")
+print(
+    f"There are {potential_merger_df.shape[0]} hospitals that fit the definition of potentially being a merger/acquisition")
 ```
 
     b.
@@ -302,9 +325,11 @@ for index, closure in valid_closure_df.iterrows():
 
 remaining_hospitals_df = valid_closure_df.loc[remaining_hospitals]
 
-filtered_valid_closure_df = valid_closure_df[~valid_closure_df.index.isin(remaining_hospitals_df.index)]
+filtered_valid_closure_df = valid_closure_df[~valid_closure_df.index.isin(
+    remaining_hospitals_df.index)]
 
-print(f"There are {filtered_valid_closure_df.shape[0]} hospitals left after correcting for potential mergers/acquisitions")
+print(
+    f"There are {filtered_valid_closure_df.shape[0]} hospitals left after correcting for potential mergers/acquisitions")
 ```
 
     c. 
@@ -312,7 +337,8 @@ print(f"There are {filtered_valid_closure_df.shape[0]} hospitals left after corr
 ```{python}
 
 # Filtering
-filtered_valid_closure_df_sorted = filtered_valid_closure_df.sort_values(by="FAC_NAME")
+filtered_valid_closure_df_sorted = filtered_valid_closure_df.sort_values(
+    by="FAC_NAME")
 
 # Printing the first 10 rows
 print(filtered_valid_closure_df_sorted.head(10))
@@ -321,9 +347,62 @@ print(filtered_valid_closure_df_sorted.head(10))
 ## Download Census zip code shapefile (10 pt) 
 
 1. 
-    a.
-    b. 
+    a. The five file types are:
+            1. .dbf (Database File) Stores attribute data associated with spatial features in the shapefile. Includes attributes such as names, values, categories, etc. 
+            2. .prj (Projection File) Defines the coordinate reference system and projection information for the shapefile
+            3. .shp (Shapefile) Contains the geometry of spatial features like points, lines, and polygons 
+            4. .shx (Shape Index File) Shape index position; stores offsets for each shape
+            5. .xml (Metadata File) Provides metadata about the dataset (who created it, data descriptions, etc.)
+
+    b. The largest file by far is the .shp file, followed by the .dbf file. The rest are fairly small.
+            1. .dbf -- 6,425,474 bytes (6.4 MB)
+            2. .prj -- 165 bytes (0.000165 MB)
+            3. .shp -- 837,544,580 bytes (847.3 MB)
+            4. .shx -- 265,060 bytes (0.26506 MB)
+            5. .xml -- 15,639 bytes (0.015639 MB)
+
+Source: https://gisgeography.com/gis-formats/
+
 2. 
+```{python}
+# Load the zip code .shp file
+zip_shp = gpd.read_file("data/gz_2010_us_860_00_500k.shp")
+
+# Plot to see what the data looks like
+zip_shp.plot()
+```
+
+```{python}
+
+# Filter Texas zip codes
+texas_zips = zip_shp[zip_shp['ZCTA5'].str.startswith(
+    ('75', '76', '77', '78', '79'))]
+
+# Calculate the number of hospitals per zip code and filter for Texas zip codes, making sure zip codes are the correct length
+counts_by_zip = (short_term_hospitals
+                 .groupby('ZIP_CD')
+                 .size()
+                 .reset_index(name='hospital_count'))
+counts_by_zip = counts_by_zip[
+    (counts_by_zip['ZIP_CD'].astype(str).str.startswith(
+        ('75', '76', '77', '78', '79')))
+]
+
+```
+
+```{python}
+texas_zips["ZIP_CD"] = texas_zips.ZCTA5.astype(float)
+
+# merge data frames together
+merged_texas_map = texas_zips.merge( counts_by_zip, how='left', on='ZIP_CD' )
+merged_texas_map.hospital_count.fillna(0, inplace=True)
+
+# create the choropleth
+merged_texas_map.plot(column='hospital_count', cmap='OrRd',
+                linewidth=0.1, edgecolor='0.8', legend=True)
+plt.title("Number of Hospitals by ZIP Code in Texas", fontsize=15)
+plt.axis("off")
+```
 
 ## Calculate zip code’s distance to the nearest hospital (20 pts) (*)
 
