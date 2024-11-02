@@ -1,5 +1,8 @@
 ---
 title: "DAP II Problem Set 4"
+geometry: 
+    margin=0.75in
+fontsize: 10pt
 format: 
   pdf:
     keep-tex: true
@@ -15,6 +18,9 @@ include-before-body:
       breaksymbolleft={},
       breaklines
     }
+execute: 
+  eval: true
+  echo: true
 ---
 
 **PS4:** Due Sat Nov 2 at 5:00PM Central. Worth 100 points. 
@@ -182,6 +188,8 @@ chart = base_chart + text_chart
 chart
 ```
 
+![Chart 1](visualization1.png){ width=400 }
+
 4. 
 a.
 ```{python}
@@ -214,8 +222,10 @@ text_chart2 = alt.Chart(unique_hospitals).mark_text(
 
 # Layer the bar and text charts
 chart2 = base_chart2 + text_chart2
-chart2
+
 ```
+
+![Chart 2](visualization2.png){ width=400 }
 
     b. The two plots are exactly the same, which tells us that there is one hospital per row of our data set.
 
@@ -371,6 +381,9 @@ Source: https://gisgeography.com/gis-formats/
 ```{python}
 # Load the zip code .shp file
 zip_shp = gpd.read_file("data/gz_2010_us_860_00_500k.shp")
+
+# reduce the complexity of shape to help with memory
+zip_shp['geometry'] = zip_shp.simplify(0.01)
 
 # Plot to see what the data looks like
 zip_shp.plot()
@@ -648,4 +661,4 @@ plt.show()
 
 Partner 1 Reflection: The first-pass method is imperfect because we're looking at zip codes where the number of active hospitals does not decrease in the year after the suspected closure and assuming that when this number doesn't change; the hospital actually remained open. We are ignoring the possibility that this hospital actually did close down, but an entirely new hospital opened up in its place. A better way to address the hospital closures that might be illegitimate is to focus more on the repeated use of the facility name or CMS certification number, in order to actually zero in on the repeat players.
 
-Partner 2 Reflection:
+Partner 2 Reflection: The way in which we identified ZIP codes affected by hospital closures may not fully reflect the real-life complexities of accessing a hospital. Instead of solely focusing on closure status, it might be helpful to incorporate other metrics such as distance to the nearest hospital, travel time by different modes of transport (car, public transit), and population demographics. This method also overlooks factors like distance to the nearest healthcare facilities and the availability of alternative care options, such as urgent care centers or telehealth services.
