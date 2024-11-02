@@ -47,9 +47,10 @@ import os
 import altair as alt
 import geopandas as gpd
 import matplotlib.pyplot as plt
+import time
 ```
 
-## Download and explore the Provider of Services (POS) file (10 pts)
+## 1. Download and explore the Provider of Services (POS) file (10 pts)
 
 1. Variables pulled:
 
@@ -215,7 +216,7 @@ chart2
 
     b. The two plots are exactly the same, which tells us that there is one hospital per row of our data set.
 
-## Identify hospital closures in POS file (15 pts) (*)
+## 2. Identify hospital closures in POS file (15 pts) (*)
 
 1. 
 
@@ -344,7 +345,7 @@ filtered_valid_closure_df_sorted = filtered_valid_closure_df.sort_values(
 print(filtered_valid_closure_df_sorted.head(10))
 ```
 
-## Download Census zip code shapefile (10 pt) 
+## 3. Download Census zip code shapefile (10 pt) 
 
 1. 
     a. The five file types are:
@@ -404,24 +405,157 @@ plt.title("Number of Hospitals by ZIP Code in Texas", fontsize=15)
 plt.axis("off")
 ```
 
-## Calculate zip code’s distance to the nearest hospital (20 pts) (*)
+## 4. Calculate zip code’s distance to the nearest hospital (20 pts) (*)
 
 1. 
+
+```{python}
+zips_all_centroids = zip_shp.copy()
+zips_all_centroids["geometry"] = zip_shp.centroid
+
+print(f"The dimensions of this GeoDataFrame are {zips_all_centroids.shape}")
+```
+
+```{python}
+print(zips_all_centroids.head(1))
+```
+
+GEO_ID: unique code for each area
+ZCTA5: the actual five digit zip code
+NAME: duplicative information; renames the actual five digit zip code
+LSAD: legal/statistical area description; each entry represents a five digit zip code
+CENSUSAREA: area of the zip code
+geometry: centroid (latitude and longitude) of the zipcode
+
 2. 
+
+```{python}
+zips_texas_centroids = zips_all_centroids[
+    zips_all_centroids["ZCTA5"].str.startswith(("75", "76", "77", "78", "79"))
+]
+
+zips_texas_centroids_grouped = zips_texas_centroids.sort_values("ZCTA5")
+print(f"There are {zips_texas_centroids_grouped.shape[0]} unique zip codes in the subset of only Texas zip codes")
+```
+
+```{python}
+zips_texas_borderstates_centroids = zips_all_centroids[
+    zips_all_centroids["ZCTA5"].str.startswith(("75", "76", "77", "78", "79", "870", "871", "872", "873", "874", "875", "876", "877", "878", "879", "880", "881", "882", "883", "884", "73", "74", "716", "717", "718", "719", "720", "721", "722", "723", "724", "725", "726", "727", "728", "729", "700", "701", "702", "703", "704", "705", "706", "707", "708", "709", "710", "711", "712", "713", "714", "715"))
+]
+
+zips_texas_borderstates_centroids_grouped = zips_texas_borderstates_centroids.sort_values("ZCTA5")
+print(f"There are {zips_texas_borderstates_centroids_grouped.shape[0]} unique zip codes in the subset of Texas and its bordering states' zip codes")
+```
+
 3. 
+
+```{python}
+
+# filter the 2016 data down to just open hospitals
+open_2016 = data_2016[data_2016["PGM_TRMNTN_CD"] == 0]
+hospitals_per_zip_2016 = open_2016.groupby("ZIP_CD").size().reset_index(name="HOSPITAL_COUNT")
+hospitals_per_zip_2016['ZIP_CD'] = hospitals_per_zip_2016['ZIP_CD'].astype(str).str.split('.').str[0]
+hospitals_per_zip_2016['ZIP_CD'] = hospitals_per_zip_2016['ZIP_CD'].astype(str)
+
+zips_withhospital_centroids = zips_texas_borderstates_centroids.merge(
+    hospitals_per_zip_2016,
+    left_on = 'ZCTA5',
+    right_on ='ZIP_CD',
+)
+
+zips_withhospital_centroids.head()
+```
+
+I did the default merge in Pandas on the zip code variable after creating a dataframe that grouped the 2016 open hospitals by zip code.
+
 4. 
+
+```{python}
+# subsetting to 10 zip codes in zips_texas_centroids
+zips_texas_centroids_subset = zips_texas_centroids.head(10)
+
+from shapely.ops import nearest_points
+from shapely.geometry import Point
+
+zips_texas_centroids_subset = zips_texas_centroids_subset.to_crs(epsg=4269) 
+zips_withhospital_centroids = zips_withhospital_centroids.to_crs(epsg=4269)
+```
+
     a.
+
+```{python}
+start_time1 = time.time()
+
+zips_texas_centroids_subset_data = zips_texas_centroids_subset[["ZCTA5", "geometry"]]
+zips_withhospital_centroids_data = zips_withhospital_centroids[["ZCTA5", "geometry"]]
+
+nearest_hospital_texas_subset = gpd.sjoin_nearest(zips_texas_centroids_subset_data, zips_withhospital_centroids_data, how = "inner", distance_col = "distance")
+
+end_time1 = time.time()
+
+total_time1 = end_time1 - start_time1
+
+print(f"It took {total_time1:.2f} seconds to join the subset of 10. I estimate it will then tak {((1935/10) * total_time1):.2f} seconds to join all the zipcodes in Texas.")
+```
+
     b.
-5. 
-    a.
-    b.
+
+```{python}
+zips_texas_centroids = zips_texas_centroids.to_crs(epsg=4269)
+
+start_time2 = time.time()
+
+zips_texas_centroids_data = zips_texas_centroids[["ZCTA5", "geometry"]]
+zips_withhospital_centroids_data = zips_withhospital_centroids[["ZCTA5", "geometry"]]
+
+nearest_hospital_texas = gpd.sjoin_nearest(zips_texas_centroids_data, zips_withhospital_centroids_data, how = "inner", distance_col = "distance")
+
+end_time2 = time.time()
+
+total_time2 = end_time2 - start_time2
+print(f"The join for all the texas zip codes took {total_time2:.2f} seconds, even though I originally estimated it'd take {((1935/10) * total_time1):.2f} seconds. I was off by {((1935/10) * total_time1) - total_time2:.2f} seconds.")
+nearest_hospital_texas.head()
+```
+
     c.
+
+It is in degrees, and one degree is roughly 69 miles (USGS.gov)
+
+```{python}
+# Degrees to miles is roughly * 69
+nearest_hospital_texas["distance_miles"] = nearest_hospital_texas["distance"] * 69
+```
+
+5. 
+
+```{python}
+nearest_hospital_texas["distance"].sum() / nearest_hospital_texas.shape[0]
+```
+
+    a. This value is in degrees
+
+```{python}
+(nearest_hospital_texas["distance"].sum() / nearest_hospital_texas.shape[0]) * 69
+```
+
+    b. Now it's about 5.2 miles. This makes much more sense.
+
+    c. 
+
+```{python}
+# create the choropleth
+nearest_hospital_texas.plot(column='distance_miles', cmap='Blues',
+                linewidth=0.1, edgecolor='0.8', legend=True)
+plt.title("Number of Hospitals by ZIP Code in Texas", fontsize=15)
+plt.axis("off")
+```
+
     
-## Effects of closures on access in Texas (15 pts)
+## 5. Effects of closures on access in Texas (15 pts)
 
 1. 
 2. 
 3. 
 4. 
 
-## Reflecting on the exercise (10 pts) 
+## 6. Reflecting on the exercise (10 pts) 
