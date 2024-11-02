@@ -27,12 +27,12 @@ Please refer to the minilesson on code style
 ## Submission Steps (10 pts)
 1. This problem set is a paired problem set.
 2. Play paper, scissors, rock to determine who goes first. Call that person *Partner 1*.
-    - Partner 1 (name and cnet ID): Sara Van Valkenburgh, 12415386
-    - Partner 2 (name and cnet ID):
+    - Partner 1 (name and cnet ID): Sara Van Valkenburgh, vanvals
+    - Partner 2 (name and cnet ID): Jennifer Edouard, jkedouard
 3. Partner 1 will accept the `ps4` and then share the link it creates with their partner. You can only share it with one partner so you will not be able to change it after your partner has accepted. 
-4. "This submission is our work alone and complies with the 30538 integrity policy." Add your initials to indicate your agreement: \*\*sv\*\* \*\*\_\_\*\*
+4. "This submission is our work alone and complies with the 30538 integrity policy." Add your initials to indicate your agreement: \*\*sv\*\* \*\*je\*\*
 5. "I have uploaded the names of anyone else other than my partner and I worked with on the problem set **[here](https://docs.google.com/forms/d/185usrCREQaUbvAXpWhChkjghdGgmAZXA3lPWpXLLsts/edit)**"  (1 point)
-6. Late coins used this pset: \*\*\_\_\*\* Late coins left after submission: \*\*\_\_\*\*
+6. Late coins used this pset: \*\*\1\4\*\* Late coins left after submission: \*\*\2\4\*\*
 7. Knit your `ps4.qmd` to an PDF file to make `ps4.pdf`, 
     * The PDF should not be more than 25 pages. Use `head()` and re-size figures when appropriate. 
 8. (Partner 1): push  `ps4.qmd` and `ps4.pdf` to your github repo.
@@ -48,6 +48,10 @@ import altair as alt
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import time
+
+import warnings
+warnings.filterwarnings("ignore")
+
 ```
 
 ## 1. Download and explore the Provider of Services (POS) file (10 pts)
@@ -63,7 +67,6 @@ import time
 
 2. 
 ```{python}
-
 # read in the data for Q4 2016
 filepath = "data/pos2016.csv"
 data_2016 = pd.read_csv(filepath)
@@ -450,7 +453,6 @@ print(f"There are {zips_texas_borderstates_centroids_grouped.shape[0]} unique zi
 3. 
 
 ```{python}
-
 # filter the 2016 data down to just open hospitals
 open_2016 = data_2016[data_2016["PGM_TRMNTN_CD"] == 0]
 hospitals_per_zip_2016 = open_2016.groupby("ZIP_CD").size().reset_index(name="HOSPITAL_COUNT")
@@ -541,7 +543,6 @@ nearest_hospital_texas["distance"].sum() / nearest_hospital_texas.shape[0]
     b. Now it's about 5.2 miles. This makes much more sense.
 
     c. 
-
 ```{python}
 # create the choropleth
 nearest_hospital_texas.plot(column='distance_miles', cmap='Blues',
@@ -554,8 +555,97 @@ plt.axis("off")
 ## 5. Effects of closures on access in Texas (15 pts)
 
 1. 
-2. 
-3. 
-4. 
+```{python}
+#filter closure df for Texas zip codes
+filtered_valid_closure_df_TX = filtered_valid_closure_df[
+    (filtered_valid_closure_df['ZIP_CD'].astype(str).str.startswith(
+        ('75', '76', '77', '78', '79')))
+]
+
+# Count the number of closures for each zip code and put into a df
+zip_code_counts = filtered_valid_closure_df['ZIP_CD'].value_counts()
+closure_summary = zip_code_counts.reset_index()
+closure_summary.columns = ['ZIP_CD', 'Number_of_Closures']
+
+# Sort the DataFrame by the number of closures in descending order 
+closure_summary.sort_values(by='Number_of_Closures', ascending=False, inplace=True)
+closure_summary.reset_index(drop=True, inplace=True)
+
+closure_summary
+
+total_closures_tx = closure_summary['Number_of_Closures'].sum()
+print(f"There were {total_closures_tx} hospital closures in Texas between 2016 and 2019")
+```
+
+2.
+```{python}
+# merge texas zips and closure data frames together
+merged_texas_zips = texas_zips.merge(closure_summary, how='left', on='ZIP_CD')
+merged_texas_zips.Number_of_Closures.fillna(0, inplace=True)
+
+# create the choropleth
+merged_texas_zips.plot(column='Number_of_Closures', cmap='OrRd',
+                linewidth=0.1, edgecolor='0.8', legend=True)
+plt.title("Number of Closures by ZIP Code in Texas", fontsize=15)
+plt.axis("off")
+```
+
+3.
+```{python}
+# Geo Data Frame of the directly affected Zip Codes
+directly_affected_zips = merged_texas_zips[merged_texas_zips['Number_of_Closures'] > 0]
+directly_affected_zips.plot().set_axis_off()
+```
+
+```{python}
+# Create the 10 mile buffer (converted miles to meters)
+directly_affected_buffer = directly_affected_zips.copy()
+directly_affected_buffer['ZIP_CD'] = directly_affected_zips.geometry.buffer(16093.4) 
+directly_affected_buffer.plot(color="red", alpha=0.5).set_axis_off()
+```
+
+```{python}
+# Spatial Join
+near_zip = gpd.sjoin(texas_zips, directly_affected_buffer, how="inner", predicate="intersects")
+near_zip.plot(color="blue", alpha=0.3).set_axis_off()
+
+num_indirectly_affected_zips = near_zip['ZIP_CD_left'].nunique()
+print(f"Number of indirectly affected ZIP codes in Texas: {num_indirectly_affected_zips}")
+```
+
+4.
+```{python}
+# Create a new column for categories
+merged_texas_zips['Category'] = 'Not Affected'  
+merged_texas_zips.loc[merged_texas_zips['Number_of_Closures'] > 0, 'Category'] = 'Directly Affected'
+merged_texas_zips.loc[merged_texas_zips['ZIP_CD'].isin(near_zip['ZIP_CD_left']), 'Category'] = 'Indirectly Affected'
+
+#Create the plot
+fig, ax = plt.subplots(figsize=(7, 7)) 
+merged_texas_zips[merged_texas_zips['Category'] == 'Not Affected'].plot(ax=ax, color="lightgrey", alpha=0.5, label="Not Affected")
+near_zip.plot(ax=ax, color="blue", alpha=0.4, label="Indirectly Affected")
+directly_affected_zips.plot(ax=ax, color="red", alpha=0.6, label="Directly Affected")
+
+# Add legend, boundaries, title, and adjust axes
+texas_zips.boundary.plot(ax=ax, color='black', linewidth=0.1, alpha=0.1)
+plt.title("Impact of Hospital Closures on Texas ZIP Codes", fontsize=16)
+ax.axis('off') 
+
+from matplotlib.lines import Line2D
+
+handles = [
+    Line2D([0], [0], color='red', lw=4, label='Directly Affected'),
+    Line2D([0], [0], color='blue', lw=4, label='Indirectly Affected'),
+    Line2D([0], [0], color='lightgrey', lw=4, label='Not Affected'),
+]
+ax.legend(handles=handles, loc='upper right', fontsize=10)
+
+plt.show()
+```
+
 
 ## 6. Reflecting on the exercise (10 pts) 
+
+Partner 1 Reflection: The first-pass method is imperfect because we're looking at zip codes where the number of active hospitals does not decrease in the year after the suspected closure and assuming that when this number doesn't change; the hospital actually remained open. We are ignoring the possibility that this hospital actually did close down, but an entirely new hospital opened up in its place. A better way to address the hospital closures that might be illegitimate is to focus more on the repeated use of the facility name or CMS certification number, in order to actually zero in on the repeat players.
+
+Partner 2 Reflection:
